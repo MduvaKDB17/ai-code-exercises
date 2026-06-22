@@ -1,0 +1,40 @@
+1. How did the AI's explanation change your understanding of the algorithm?
+
+The AI explanation helped me understand that the algorithm does not simply sort tasks by priority. It calculates a score using several 
+factors such as task priority, due dates, status, tags, and recent updates. This showed me how multiple conditions work together to 
+determine task importance.
+
+2. What aspects were still difficult to understand after AI explanation?
+
+The most difficult part was understanding how the different score adjustments combine to produce the final score. It was also challenging
+to follow how positive and negative values affect the final ranking of tasks.
+
+3. How would you explain this algorithm to another junior developer?
+
+I would explain that the algorithm assigns a score to each task based on its priority, due date, status, tags, and update history. 
+Tasks with higher scores are considered more important. After calculating scores for all tasks, the algorithm sorts them from highest 
+to lowest score so that the most important tasks appear first.
+
+4. Did you test this understanding against AI?
+
+Yes. I tested my understanding by providing different task examples and checking whether the AI calculated the correct scores and 
+task order. The results matched the algorithm's logic and confirmed my understanding.
+
+5. How might you improve the algorithm based on your understanding?
+
+The algorithm could be improved by allowing users to customize score weights, adding support for recurring tasks, considering task 
+complexity, and using machine learning to learn user preferences. Performance could also be improved by caching previously calculated 
+scores.
+
+Insights and Learning Points
+Priority alone is not enough to determine task importance.
+Due dates significantly influence task urgency.
+Completed tasks should receive lower scores.
+Tags can be used to identify critical tasks.
+Weighted scoring provides more accurate prioritization.
+Sorting algorithms become more useful when combined with business rules.
+
+Conclusion
+The Task Priority Sorting Algorithm is an effective method for ranking tasks according to their importance. By combining priority 
+levels, due dates, task status, tags, and update history, it creates a more intelligent prioritization system. This exercise improved 
+my understanding of weighted scoring systems, sorting algorithms, and practical task management applications.
