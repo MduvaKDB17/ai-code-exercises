@@ -127,7 +127,7 @@ manager.createTask(
     "2026-06-30",
     List.of("school", "java")
 );
-Step 2: View Tasks
+Step 2: View Tasks.
 
 Display all tasks:
 
