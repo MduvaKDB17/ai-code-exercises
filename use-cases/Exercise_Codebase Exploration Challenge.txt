@@ -1,0 +1,389 @@
+Exercise Part 1
+
+Files Related to Task Creation and Status Updates
+
+taskmanager/model/Task.java
+taskmanager/app/TaskManager.java
+taskmanager/storage/TaskStorage.java
+
+Relevant Code
+
+// Task.java
+public Task(String title, String description, TaskPriority priority, LocalDateTime dueDate, List<String> tags) {
+    this.id = UUID.randomUUID().toString();
+    this.title = title;
+    this.description = description;
+    this.priority = priority;
+    this.status = TaskStatus.TODO;
+    this.createdAt = LocalDateTime.now();
+    this.updatedAt = this.createdAt;
+    this.dueDate = dueDate;
+    this.completedAt = null;
+    this.tags = tags != null ? new ArrayList<>(tags) : new ArrayList<>();
+}
+
+public void markAsDone() {
+    this.status = TaskStatus.DONE;
+    this.completedAt = LocalDateTime.now();
+    this.updatedAt = this.completedAt;
+}
+
+// TaskManager.java
+public String createTask(String title, String description, int priorityValue, String dueDateStr, List<String> tags) {
+    TaskPriority priority = TaskPriority.fromValue(priorityValue);
+    LocalDateTime dueDate = null;
+    if (dueDateStr != null && !dueDateStr.isEmpty()) {
+        try {
+            LocalDate localDate = LocalDate.parse(dueDateStr, DateTimeFormatter.ISO_DATE);
+            dueDate = LocalDateTime.of(localDate, LocalTime.MAX);
+        } catch (DateTimeParseException e) {
+            System.err.println("Invalid date format. Use YYYY-MM-DD");
+            return null;
+        }
+    }
+    Task task = new Task(title, description, priority, dueDate, tags);
+    return storage.addTask(task);
+}
+
+public boolean updateTaskStatus(String taskId, String newStatusValue) {
+    TaskStatus newStatus = TaskStatus.fromValue(newStatusValue);
+    if (newStatus == TaskStatus.DONE) {
+        Task task = storage.getTask(taskId);
+        if (task != null) {
+            task.markAsDone();
+            storage.save();
+            return true;
+        }
+        return false;
+    } else {
+        Task updates = new Task("tempTitle");
+        updates.setStatus(newStatus);
+        return storage.updateTask(taskId, updates);
+    }
+}
+
+
+Main Components Involved in Task Creation/Updates
+    
+      Task
+      Model class with properties like id, title, status, priority, and timestamps.
+    
+    
+      TaskManager
+      Handles business logic for creating, updating, and managing tasks.
+    
+    
+      TaskStorage
+      Manages persistence (saving/loading tasks to/from storage).
+    
+    
+      TaskPriority
+      Enum defining priority levels (e.g., LOW, MEDIUM, HIGH).
+    
+    
+      TaskStatus
+      Enum defining task statuses (e.g., TODO, IN_PROGRESS, DONE).
+    
+
+Execution Flow When a Task is Created
+
+1. User calls createTask(title, description, priorityValue, dueDateStr, tags) in TaskManager.
+2. priorityValue is converted to TaskPriority using TaskPriority.fromValue(priorityValue).
+3. If dueDateStr is provided, it is parsed into LocalDateTime (end of the specified day).
+4. A new Task object is created with:
+
+A random UUID for id.
+Default status set to TaskStatus.TODO.
+createdAt and updatedAt set to the current time.
+
+5. The task is added to storage via storage.addTask(task).
+6. The id of the created task is returned.
+
+Execution Flow When a Task Status is Updated
+
+1. User calls updateTaskStatus(taskId, newStatusValue) in TaskManager.
+2. newStatusValue is converted to TaskStatus using TaskStatus.fromValue(newStatusValue).
+3. If the new status is DONE:
+
+The task is retrieved from storage using storage.getTask(taskId).
+If the task exists, task.markAsDone() is called, which:
+
+Sets status to DONE.
+Sets completedAt and updatedAt to the current time.
+
+Changes are persisted via storage.save().
+
+4. For other statuses (e.g., TODO, IN_PROGRESS):
+
+A temporary Task object is created with the new status.
+storage.updateTask(taskId, updates) is called to apply the update.
+
+How Data is Stored and Retrieved
+
+Tasks are stored and managed by the TaskStorage class.
+TaskStorage provides methods like:
+
+addTask(task): Adds a new task to storage.
+getTask(taskId): Retrieves a task by its ID.
+updateTask(taskId, updates): Updates a task’s properties.
+save(): Persists changes to storage (e.g., file or database).
+
+Tasks are not stored in memory permanently; TaskStorage handles saving to a persistent medium.
+
+Design Patterns Discovered
+
+Factory Pattern: The createTask method in TaskManager acts as a factory for Task objects.
+Enum Pattern: TaskPriority and TaskStatus are enums, ensuring type safety.
+Separation of Concerns: TaskManager handles business logic, while TaskStorage handles persistence.
+Immutable Collections: getTags() returns a new ArrayList to prevent external modifications.
+
+Exercise Part 2
+
+Initial Understanding vs. What I Discovered
+
+      Aspect
+      Initial Understanding
+      What I Discovered
+
+      Priority Definition
+      Thought priority was just an integer.
+      It’s an enum (TaskPriority) with numeric values and a fromValue() method.
+    
+      Priority Filtering
+      Assumed tasks were sorted by priority.
+      Tasks are filtered by priority using storage.getTasksByPriority(priority).
+    
+      Priority Updates
+      Thought priority was updated directly.
+      Uses TaskPriority.fromValue() to convert integers to enum values.
+    
+      Error Handling
+      Didn’t consider invalid priority values.
+      fromValue() throws an IllegalArgumentException for invalid values.
+    
+  
+Key Insights from Guided Questions
+
+1. Type Safety: Using TaskPriority (an enum) ensures only valid priority values are used.
+2. Separation of Concerns: TaskManager delegates filtering to TaskStorage.
+3. Flexible Filtering: The listTasks method supports filtering by status, priority, or overdue tasks.
+4. Error Handling: The code throws exceptions for invalid inputs (e.g., priorityValue = 4).
+5. Extensibility: Easy to add new priority levels (e.g., URGENT) to the TaskPriority enum.
+
+Misconceptions Clarified
+
+1. Priority is an enum, not an integer.
+2. Tasks are filtered, not sorted, by priority.
+3. Error handling for invalid inputs is done via exceptions.
+
+
+// TaskManager.java
+public boolean updateTaskPriority(String taskId, int newPriorityValue) {
+    TaskPriority newPriority = TaskPriority.fromValue(newPriorityValue);
+    Task updates = new Task("tempTitle");
+    updates.setPriority(newPriority);
+    return storage.updateTask(taskId, updates);
+}
+
+public List<Task> listTasks(String statusFilter, Integer priorityFilter, boolean showOverdue) {
+    if (priorityFilter != null) {
+        TaskPriority priority = TaskPriority.fromValue(priorityFilter);
+        return storage.getTasksByPriority(priority);
+    }
+    return storage.getAllTasks();
+}
+
+
+Assumed TaskPriority Enum
+
+public enum TaskPriority {
+    LOW(1), MEDIUM(2), HIGH(3);
+
+    private final int value;
+
+    TaskPriority(int value) {
+        this.value = value;
+    }
+
+    public int getValue() {
+        return value;
+    }
+
+    public static TaskPriority fromValue(int value) {
+        for (TaskPriority priority : values()) {
+            if (priority.value == value) {
+                return priority;
+            }
+        }
+        throw new IllegalArgumentException("Invalid priority value: " + value);
+    }
+}
+
+
+Exercise Part 3
+
+Entry Points and Components Involved
+
+Entry Point: updateTaskStatus(taskId, newStatusValue) in TaskManager.
+Components:
+
+TaskManager: Handles the logic for updating task status.
+TaskStorage: Retrieves and saves tasks.
+Task: Stores the task’s status, completedAt, and updatedAt.
+
+// TaskManager.java
+public boolean updateTaskStatus(String taskId, String newStatusValue) {
+    TaskStatus newStatus = TaskStatus.fromValue(newStatusValue);
+    if (newStatus == TaskStatus.DONE) {
+        Task task = storage.getTask(taskId);
+        if (task != null) {
+            task.markAsDone();
+            storage.save();
+            return true;
+        }
+        return false;
+    } else {
+        Task updates = new Task("tempTitle");
+        updates.setStatus(newStatus);
+        return storage.updateTask(taskId, updates);
+    }
+}
+
+// Task.java
+public void markAsDone() {
+    this.status = TaskStatus.DONE;
+    this.completedAt = LocalDateTime.now();
+    this.updatedAt = this.completedAt;
+}
+
+
+Data Flow Diagram
+
+Mermaid Error
+Error: Parse error on line 2:
+...lls updateTaskStatus(taskId, "DONE")| B[
+-----------------------^
+Expecting 'SQE', 'DOUBLECIRCLEEND', 'PE', '-)', 'STADIUMEND', 'SUBROUTINEEND', 'PIPE', 'CYLINDEREND', 'DIAMOND_STOP', 'TAGEND', 'TRAPEND', 'INVTRAPEND', 
+'UNICODE_TEXT', 'TEXT', 'TAGSTART', got 'PS'
+
+
+State Changes During Task Completion
+    
+      status
+      -Before Completion = TODO or IN_PROGRESS
+      -After Completion = DONE
+    
+    
+      completedAt
+      -Before Completion = null
+      -After Completion = Current LocalDateTime
+    
+    
+      updatedAt
+      -Before Completion = Previous timestamp
+      -After Completion = Current LocalDateTime
+    
+Potential Points of Failure
+
+1. Task Not Found: If storage.getTask(taskId) returns null, the method returns false.
+2. Storage Failure: If storage.save() fails, changes may not be persisted.
+3. Concurrency Issues: Race conditions if multiple threads call updateTaskStatus simultaneously.
+4. Invalid Status: If newStatusValue is invalid, TaskStatus.fromValue() throws an exception.
+5. Null taskId: If taskId is null, storage.getTask(taskId) may throw a NullPointerException.
+
+How Changes Are Persisted
+
+Changes are saved via storage.save(), which likely:
+
+Serializes the tasks list to a file (e.g., JSON or binary format).
+Or saves tasks to a database (e.g., SQLite, MySQL).
+
+The exact implementation is in TaskStorage, which is not shared but is called by TaskManager.
+
+Assumed TaskStatus Enum
+
+public enum TaskStatus {
+    TODO("TODO"), IN_PROGRESS("IN_PROGRESS"), DONE("DONE");
+
+    private final String value;
+
+    TaskStatus(String value) {
+        this.value = value;
+    }
+
+    public String getValue() {
+        return value;
+    }
+
+    public static TaskStatus fromValue(String value) {
+        for (TaskStatus status : values()) {
+            if (status.value.equalsIgnoreCase(value)) {
+                return status;
+            }
+        }
+        throw new IllegalArgumentException("Invalid status value: " + value);
+    }
+}
+
+
+
+
+Exercise Part 4
+
+High-Level Architecture Overview
+
+Model Layer: Task, TaskPriority, TaskStatus (data structures and enums).
+Application Layer: TaskManager (business logic for task operations).
+Storage Layer: TaskStorage (persistence).
+
+How Key Features Work
+
+1. Task Creation:
+
+User provides title, description, priority, dueDate, and tags.
+TaskManager creates a new Task with a unique ID, default status = TODO, and timestamps.
+Task is saved via storage.addTask(task).
+
+2. Task Prioritization:
+
+Each task has a priority of type TaskPriority (enum with values like LOW, MEDIUM, HIGH).
+Tasks can be filtered by priority using storage.getTasksByPriority(priority).
+Priorities are updated via updateTaskPriority(taskId, newPriorityValue).
+
+3. Task Completion:
+
+User calls updateTaskStatus(taskId, "DONE").
+TaskManager retrieves the task, calls markAsDone() to update its state, and persists changes via storage.save().
+
+Interesting Design Pattern
+
+Enum Pattern:
+
+TaskPriority and TaskStatus are enums with:
+
+Numeric/string values (e.g., LOW = 1, DONE = "DONE").
+Helper methods (e.g., fromValue() to convert inputs to enums).
+
+Benefits: Type safety, readability, and extensibility.
+
+
+Challenges and How Prompts Helped
+
+      Challenge
+      How Prompts Helped
+    
+      Understanding TaskPriority/TaskStatus
+      Asked me to examine the enum definitions and fromValue().
+    
+    
+      Mapping data flow for task completion
+      Guided me to trace the flow from updateTaskStatus to storage.save().
+    
+    
+      Identifying failure points
+      Prompted me to consider edge cases (e.g., task not found, invalid status).
+    
+  
+
+
+
