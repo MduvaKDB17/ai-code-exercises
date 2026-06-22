@@ -1,0 +1,187 @@
+Prompt 1: Comprehensive Endpoint Documentation
+List Products API
+Endpoint
+GET /api/products
+Purpose
+
+Retrieves a list of products from the database. Supports filtering by category, price range, stock availability, sorting, and pagination.
+
+Authentication
+
+No authentication is required.
+
+Query Parameters
+Parameter	Type	Required	Description
+category	String	No	Filter products by category
+minPrice	Number	No	Minimum product price
+maxPrice	Number	No	Maximum product price
+sort	String	No	Field used for sorting (default: createdAt)
+order	String	No	Sort order: asc or desc
+page	Integer	No	Page number (default: 1)
+limit	Integer	No	Number of products per page (default: 20)
+inStock	Boolean	No	Return only products that are in stock
+Success Response
+
+Status Code: 200 OK
+
+{
+  "products": [
+    {
+      "_id": "12345",
+      "name": "Wireless Headphones",
+      "price": 89.99,
+      "category": "electronics",
+      "stockQuantity": 45
+    }
+  ],
+  "pagination": {
+    "total": 42,
+    "page": 1,
+    "limit": 20,
+    "pages": 3
+  }
+}
+Error Response
+
+Status Code: 500 Internal Server Error
+
+{
+  "error": "Server error",
+  "message": "Failed to fetch products"
+}
+Example Request 1
+GET /api/products?category=electronics
+Example Response
+{
+  "products": [
+    {
+      "name": "Wireless Headphones",
+      "price": 89.99
+    }
+  ]
+}
+Example Request 2
+GET /api/products?minPrice=20&maxPrice=100&sort=price&order=asc
+Example Response
+{
+  "products": [
+    {
+      "name": "Bluetooth Speaker",
+      "price": 49.99
+    }
+  ]
+}
+Special Considerations
+Supports pagination for large datasets.
+Supports dynamic sorting.
+Supports filtering by category and price range.
+Returns only available products when inStock=true.
+Prompt 2: OpenAPI Documentation
+openapi: 3.0.0
+info:
+  title: Products API
+  version: 1.0.0
+
+paths:
+  /api/products:
+    get:
+      summary: List products
+      description: Retrieve products with filtering, sorting and pagination.
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+
+        - name: minPrice
+          in: query
+          schema:
+            type: number
+
+        - name: maxPrice
+          in: query
+          schema:
+            type: number
+
+        - name: page
+          in: query
+          schema:
+            type: integer
+
+        - name: limit
+          in: query
+          schema:
+            type: integer
+
+      responses:
+        '200':
+          description: Products retrieved successfully
+
+        '500':
+          description: Server error
+Prompt 3: Developer Usage Guide
+How to Use the Products API
+Authentication
+
+No authentication is required for this endpoint.
+
+Sending Requests
+
+Use the GET method:
+
+GET /api/products
+
+Example:
+
+GET /api/products?category=electronics&page=1&limit=10
+Understanding Responses
+
+A successful response returns:
+
+Product information
+Pagination details
+Total product count
+
+Example:
+
+{
+  "products": [],
+  "pagination": {
+    "total": 42,
+    "page": 1,
+    "limit": 20,
+    "pages": 3
+  }
+}
+Handling Errors
+
+If the server encounters an error:
+
+{
+  "error": "Server error",
+  "message": "Failed to fetch products"
+}
+JavaScript Example
+fetch('https://api.example.com/api/products?category=electronics')
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .catch(error => console.error(error));
+
+
+Reflection
+Which parts of the API were most challenging to document?
+
+The filtering, sorting, and pagination options were the most challenging because multiple query parameters can be combined in different ways.
+
+How did you adjust your prompts to get better results?
+
+I specified the required sections such as parameters, responses, authentication, examples, and error handling to generate more complete documentation.
+
+Which documentation format did you find most effective?
+
+The OpenAPI format was the most effective because it provides a structured and industry-standard representation of the API.
+
+How would you incorporate this approach into your development workflow?
+
+I would use AI-generated documentation during development to quickly create API references, usage guides, and OpenAPI specifications while ensuring 
+consistency across projects.
