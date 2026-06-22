@@ -1,0 +1,148 @@
+The selected code
+Java Task Priority Sorting Algorithm
+
+public static int calculateTaskScore(Task task) {
+    Map<TaskPriority, Integer> priorityWeights = Map.of(
+        TaskPriority.LOW, 1,
+        TaskPriority.MEDIUM, 2,
+        TaskPriority.HIGH, 3,
+        TaskPriority.URGENT, 4
+    );
+
+    int score = priorityWeights.getOrDefault(task.getPriority(), 0) * 10;
+
+    if (task.getDueDate() != null) {
+        long daysUntilDue = ChronoUnit.DAYS.between(LocalDateTime.now(), task.getDueDate());
+
+        if (daysUntilDue < 0) {
+            score += 30;
+        } else if (daysUntilDue == 0) {
+            score += 20;
+        } else if (daysUntilDue <= 2) {
+            score += 15;
+        } else if (daysUntilDue <= 7) {
+            score += 10;
+        }
+    }
+
+    if (task.getStatus() == TaskStatus.DONE) {
+        score -= 50;
+    } else if (task.getStatus() == TaskStatus.REVIEW) {
+        score -= 15;
+    }
+
+    if (task.getTags().stream().anyMatch(tag ->
+            List.of("blocker", "critical", "urgent").contains(tag))) {
+        score += 8;
+    }
+
+    long daysSinceUpdate = ChronoUnit.DAYS.between(task.getUpdatedAt(), LocalDateTime.now());
+
+    if (daysSinceUpdate < 1) {
+        score += 5;
+    }
+
+    return score;
+}
+Documentation Generated Using Prompt 1
+
+ Calculates an importance score for a task based on priority,
+ due date, status, tags, and recent updates.
+ 
+ The score is used to determine how important a task is when
+ sorting tasks by priority.
+ 
+ @param task The task whose importance score will be calculated.
+ 
+ @return An integer representing the task's calculated priority score.
+         Higher scores indicate higher importance.
+ 
+ @throws NullPointerException if the task object is null.
+ 
+  Example:
+  Task task = new Task("Assignment");
+  int score = calculateTaskScore(task);
+ 
+  Important Notes:
+  - Overdue tasks receive additional points.
+  - Completed tasks receive a large score reduction.
+  - Tasks tagged as blocker, critical, or urgent receive bonus points.
+  - Recently updated tasks receive additional points.
+  - Tasks with higher priority levels start with a higher base score.
+ 
+Insights Identified Using Prompt 2
+High-Level Purpose
+
+The algorithm determines which tasks are most important by assigning a weighted score to each task. The score is calculated using several 
+task attributes and then used for sorting tasks in priority order.
+
+Step-by-Step Logic
+Assign a base score according to task priority.
+Add points if the task has an approaching due date.
+Add more points if the task is overdue.
+Reduce points for completed or review tasks.
+Add bonus points for critical tags.
+Add bonus points for recently updated tasks.
+Return the final score.
+Assumptions and Edge Cases
+The task object must not be null.
+Tasks without due dates receive no due-date bonus.
+Completed tasks may end up with negative scores.
+Unknown priorities default to a score of zero.
+Tag matching is case-sensitive.
+Suggested Inline Comments
+// Assign base score according to task priority
+int score = priorityWeights.getOrDefault(task.getPriority(), 0) * 10;
+
+// Add urgency points based on due date
+if (task.getDueDate() != null) { ... }
+
+// Reduce score for completed or review tasks
+if (task.getStatus() == TaskStatus.DONE) { ... }
+
+// Add bonus for critical tags
+if (task.getTags().stream().anyMatch(...)) { ... }
+
+// Add bonus for recently updated tasks
+if (daysSinceUpdate < 1) { ... }
+Potential Improvements
+Make priority weights configurable.
+Use case-insensitive tag matching.
+Cache calculated scores for performance.
+Add support for task complexity estimates.
+Add validation for null task values.
+Final Combined Documentation Version
+Function Purpose
+
+The calculateTaskScore() method calculates an importance score for a task by combining priority level, due date urgency, task status, 
+tags, and update history. The score is used to rank tasks so that the most important tasks appear first.
+
+Inputs
+Task task – The task object to evaluate.
+Output
+Integer score representing task importance.
+Business Rules
+Higher priority tasks receive higher starting scores.
+Overdue and near-due tasks receive bonus points.
+Completed tasks receive a significant score reduction.
+Critical tags increase task importance.
+Recently updated tasks receive a small bonus.
+Benefits
+Produces more accurate task rankings.
+Helps users focus on urgent work.
+Supports intelligent task management.
+Combines multiple factors rather than relying only on priority.
+
+Reflection
+Which parts of the documentation were most challenging for the AI?
+
+The AI found it most difficult to explain the interaction between multiple score adjustments and the overall impact on the final score.
+
+What additional information did you need to provide?
+
+I needed to specify that the algorithm was used for task prioritisation and sorting so that the AI could better explain its purpose.
+
+How would you use this approach in your own projects?
+
+I would use AI-generated documentation to quickly document complex methods, improve code readability, and help new developers understand 
+business logic more efficiently.
