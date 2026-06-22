@@ -1,0 +1,161 @@
+EXERCISE PART 1
+What I think this application does:
+It seems to be a task management app — basically a more advanced to-do list. Looking at the class names (Task, TaskPriority, TaskStatus, TaskManager),
+I'm guessing users can create tasks, give them a priority level, set a due date, and mark them as done. There's also something about tags and statistics, 
+so maybe it tracks how many tasks you've completed too.
+
+Technologies/frameworks I think it uses:
+I don't see any annotations like @Service or @Controller, so I don't think this uses Spring. It looks like plain Java to me.
+I noticed java.time.LocalDateTime and java.time.LocalDate being used, so it's probably Java 8 or newer. I also see .stream() being used in a few places,
+which is also a Java 8+ feature. I'm not sure if there are any external libraries — I didn't see any in TaskManager.java, but I haven't checked the build file yet.
+
+Folder structure pattern I observed:
+Based on the package names (taskmanager.app, taskmanager.model, taskmanager.storage), it looks like the code is split by responsibility rather than by feature.
+So all the data classes are grouped together in model, anything related to saving/loading data is in storage, and the main logic that ties everything together 
+is in app. This feels like a fairly standard layered structure.
+
+Things I was confused about:
+I couldn't find a main() method anywhere, so I don't actually know how you're supposed to run this program.
+In updateTaskStatus and updateTaskPriority, there's this odd pattern where it creates a brand new Task object just called "tempTitle" and only sets one field on it
+before passing it to storage.updateTask(). That felt strange to me — why create a whole new object instead of just updating the existing one directly? I assumed maybe
+TaskStorage was somehow smart enough to merge only the changed fields, but I wasn't sure.
+I also wasn't sure where the actual data gets stored — a database? A file? Nothing in TaskManager.java made that obvious.
+
+EXERCISE PART 2 
+My initial search
+I searched the codebase for terms like "csv", "export", "write", and "file". I didn't find anything called "export" or "CSV" anywhere — this feature 
+doesn't exist yet. But I did find something related: TaskStorage.java already has file-writing logic in its save() method, which uses FileWriter and a 
+Gson object to write all tasks out to a JSON file. So there's no export function, but there is an existing pattern for writing task data to a file.
+I also noticed TaskStorage has a getAllTasks() method that returns every task as a List<Task> — that seems like it would be useful for export too, 
+since I'd need to loop over every task to write it to a CSV.
+
+My hypothesis
+Based on what I found, I think a CSV export feature would most likely belong in TaskStorage, right next to the existing save() method, since that's 
+already where file-writing happens. I'm guessing I'd add something like an exportToCsv(String filePath) method there.
+I think TaskManager would also need a small change — probably a new public method like exportTasks(String filePath) that just calls the new TaskStorage 
+method, the same way createTask() calls storage.addTask(). That seems to be the pattern this codebase follows — TaskManager doesn't do the actual work 
+itself, it delegates to TaskStorage.
+
+EXERCISE PART 3
+The core entity classes are Task, TaskStatus, and TaskPriority.
+Task is the main entity — it has an id, title, description, priority, status, three different timestamps (createdAt, updatedAt, completedAt), a due date,
+ and a list of tags. The business logic methods on it are update(), markAsDone(), isOverdue(), addTag(), and removeTag().
+TaskStatus is an enum with four values: TODO, IN_PROGRESS, REVIEW, DONE. Each one has a string value attached (like "todo", "in_progress").
+TaskPriority is an enum with four values: LOW, MEDIUM, HIGH, URGENT, each mapped to an integer (1 through 4).
+A term specific to this app that I noticed is "overdue" — it's not just about the due date, it's a calculated thing based on both the due date AND
+ whether the task is done.
+
+
+ My sketch of how the entities relate:
+Task
+ ├── has one TaskStatus
+ ├── has one TaskPriority
+ ├── has a list of tags (just strings)
+ └── has 4 different date fields
+What I think each entity represents:
+
+Task — a single to-do item someone needs to complete
+TaskStatus — what stage the task is at in its lifecycle
+TaskPriority — how urgent/important the task is
+
+Questions/confusion I had:
+
+I wasn't sure if isOverdue() only checked the due date, or if it also considered the status — turns out it checks both.
+I didn't expect there to be 4 status values — I assumed there'd just be something like "not done" vs "done."
+I wasn't sure why update() has a special check for tags (!isEmpty()) when none of the other fields have that — this means you can't actually clear a
+task's tags through an update, since an empty list is treated as "no change."
+
+Q1: If you call task.update(updates) where updates has an empty tags list, what happens to the original tags?
+
+They stay the same. The check is if (updates.getTags() != null && !updates.getTags().isEmpty()) — so an empty list fails that condition and the original
+ tags are left untouched.
+ This means there's currently no way to clear a task's tags through update().
+Q2: Can a task ever be IN_PROGRESS and overdue at the same time? What about DONE and overdue?
+
+Yes, IN_PROGRESS and overdue can happen together — isOverdue() only excludes DONE tasks. So a task that's TODO, IN_PROGRESS, or REVIEW can be marked
+ overdue if its due date has passed. But a DONE task can never be overdue, even if it was completed after its due date — the status check
+  status != TaskStatus.DONE blocks that.
+Q3: What's the default priority if none is specified?
+
+MEDIUM. This comes from the shorter Task constructors — Task(title) and Task(title, description) — which both delegate to the full constructor with
+ TaskPriority.MEDIUM hardcoded in.
+
+ Task
+ ├── id: String (UUID, auto-generated)
+ ├── title, description: String
+ ├── priority: TaskPriority  → LOW(1) | MEDIUM(2) | HIGH(3) | URGENT(4)
+ ├── status: TaskStatus      → TODO | IN_PROGRESS | REVIEW | DONE
+ ├── createdAt: set once, on creation
+ ├── updatedAt: refreshed on every update or markAsDone()
+ ├── completedAt: only set by markAsDone()
+ ├── dueDate: optional
+ ├── tags: List<String>, cannot be cleared via update()
+ └── isOverdue: calculated — dueDate passed AND status != DONE
+
+Glossary of domain terms
+TermMeaningTaskA unit of work tracked by the systemStatusWorkflow stage of a task: todo, in_progress, review, donePriorityUrgency level of a task: low,
+medium, high, urgent (default: medium)OverdueA task past its due date that is not yet marked donePartial updateUpdating only the fields that are
+non-null on the incoming "updates" object — tags additionally require the list to be non-empty
+
+EXERCISE PART 4
+My plan is
+New concept this rule introduces:
+
+There's no ABANDONED status today — TaskStatus only has TODO, IN_PROGRESS, REVIEW, DONE. So step one isn't logic, it's adding a brand new enum value.
+Files I'd need to modify:
+FileChangeTaskStatus.javaAdd a new value, e.g. ABANDONED("abandoned")Task.javaAdd a method like checkAndMarkAbandoned() that applies the rule, since
+isOverdue() already lives here and this is clearly business logic about the task's own stateTaskManager.javaAdd a way to trigger this check — either
+a new method like processAbandonedTasks(), or call it during listTasks()Possibly a new "scheduler" or Main/Cli classSomething needs to trigger this check
+periodically, since none of the current code runs on a timer
+
+My outline of the actual logic:
+java// In Task.java, something like:
+public boolean shouldBeAbandoned() {
+    if (this.dueDate == null || this.status == TaskStatus.DONE) {
+        return false;
+    }
+    if (this.priority == TaskPriority.HIGH || this.priority == TaskPriority.URGENT) {
+        return false; // exempt — rule says "high priority", I'd ask if URGENT counts too
+    }
+    long daysOverdue = Duration.between(this.dueDate, LocalDateTime.now()).toDays();
+    return daysOverdue > 7;
+}
+
+I'd reuse the existing isOverdue() pattern (checking dueDate + status) rather than writing the date math from scratch, since Task already has that
+logic shape.
+
+Questions I'd ask my team before implementing:
+
+Does "high priority" mean only HIGH, or does URGENT count as exempt too?
+Should ABANDONED tasks still show up in getOverdueTasks(), or are they excluded like DONE tasks?
+What actually triggers this check — is it real-time (checked every time tasks are listed), or does something need to run on a schedule (e.g. a daily cron job)? There's currently nothing like that in the codebase.
+Should markAsDone()-style timestamp tracking apply here too — i.e. should there be an abandonedAt field, similar to completedAt?
+
+Reflection
+How did the AI prompts help?
+
+Working through Parts 1–3 first meant I already knew exactly where business logic lives (Task.java, not TaskStorage), how the status/priority enums
+ are structured, and the existing pattern for date-based rules (isOverdue()). Without that groundwork, I'd have had to re-discover all of this from
+  scratch while also trying to design a new feature — doing both at once is much harder than doing comprehension first, then design.
+What I'm still unsure about:
+
+I still don't know how anything in this app actually gets triggered or scheduled — there's no entry point, no main(), no scheduler visible anywhere in
+the three files I've seen. I can write the rule logic confidently, but I genuinely don't know how it would get run in this system.
+Next steps:
+
+Find the actual entry point (Main/Cli class) to see if this is a one-shot CLI tool or something long-running, since that completely changes how I'd
+implement "check every 7 days."
+
+
+Initial vs. final understanding: Initially assumed this was a task app using plain Java with a layered folder structure, but was unsure how data was
+stored and confused by a pattern in TaskManager that created throwaway Task objects just to update one field. After tracing the code, confirmed the
+architecture is layered (model/storage/app), found that storage is a flat JSON file (via Gson, not a database), and discovered that Task.update() does
+a partial merge — only non-null fields get applied — which explained the throwaway-object pattern. Also found an edge case: empty tag lists are
+treated as "no change," so tags can never be cleared via update.
+Most valuable insights per prompt: Project Structure revealed the architecture and flagged the update pattern as worth investigating. Feature Location
+found that file-writing logic already existed in save(), meaning CSV export could reuse that pattern rather than starting from scratch. Domain
+Understanding resolved the update-merge mystery and surfaced the tags bug. Practical Application exposed a real gap — there's no scheduler/trigger
+mechanism anywhere in the codebase, so a "check every 7 days" rule has no obvious home yet.
+Approach to the business rule: Reused the existing isOverdue() pattern as a template for the new abandonment check, identified that ABANDONED needs 
+adding to TaskStatus, and placed the new logic in Task.java for consistency. Flagged open questions about whether URGENT priority is exempt and how 
+the rule would actually get triggered, since no scheduling mechanism exists in the code reviewed.
